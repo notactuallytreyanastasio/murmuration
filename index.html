@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>murmuration</title>
+  <meta name="description" content="A unique flock grown from your seed. Visitors' flocks merge. No server; the site's only memory is its visitors.">
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0c10;
+      color: #c9c4b4; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    canvas { display: block; }
+    .wordmark { position: fixed; top: 14px; left: 16px; font-size: 13px;
+      letter-spacing: .35em; text-transform: uppercase; opacity: .55; user-select: none; }
+    .hud { position: fixed; left: 16px; bottom: 14px; font-size: 12px;
+      display: flex; gap: 10px; align-items: center; opacity: .8; }
+    .hud .seed { opacity: .95; }
+    .hud button { background: none; border: 1px solid #3a3d46; color: #c9c4b4;
+      font: inherit; padding: 3px 10px; border-radius: 99px; cursor: pointer; }
+    .hud button:hover { border-color: #c9c4b4; }
+  </style>
+</head>
+<body>
+  <canvas id="sky"></canvas>
+  <div class="wordmark">murmuration</div>
+  <div class="hud">
+    <span>seed</span><span class="seed" id="hudSeed"></span>
+    <button id="copyBtn">copy link</button>
+    <button id="newBtn">new flock</button>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
