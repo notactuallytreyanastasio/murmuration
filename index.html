@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>murmuration</title>
   <meta name="description" content="A unique flock grown from your seed. Visitors' flocks merge. No server; the site's only memory is its visitors.">
   <style>
     html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0c10;
-      color: #c9c4b4; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    canvas { display: block; }
+      color: #c9c4b4; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      overscroll-behavior: none; }
+    canvas { display: block; touch-action: none; }
     .wordmark { position: fixed; top: 14px; left: 16px; font-size: 13px;
       letter-spacing: .35em; text-transform: uppercase; opacity: .55; user-select: none; }
     .hud { position: fixed; left: 16px; bottom: 14px; font-size: 12px;
@@ -34,6 +35,23 @@
       border-radius: 99px; color: #c9c4b4; padding: 6px 12px; outline: none; }
     .chat input:focus { border-color: #c9c4b4; }
     .chat input:disabled { opacity: .45; }
+
+    /* ---- small screens ---- */
+    @media (max-width: 640px) {
+      .wordmark { top: calc(10px + env(safe-area-inset-top)); left: 12px;
+        font-size: 11px; letter-spacing: .28em; }
+      .presence { top: calc(10px + env(safe-area-inset-top)); right: 12px;
+        font-size: 11px; max-width: 48vw; text-align: right; }
+      .hud { left: 12px; right: 12px; bottom: auto;
+        top: calc(34px + env(safe-area-inset-top));
+        font-size: 11px; gap: 8px; flex-wrap: wrap; }
+      .hud button { padding: 4px 10px; }
+      .chat { left: 12px; right: 12px; width: auto;
+        bottom: calc(10px + env(safe-area-inset-bottom)); }
+      .chat-log { max-height: 24vh; }
+      /* 16px stops iOS Safari from zooming the page on focus */
+      .chat input { font-size: 16px; padding: 8px 14px; }
+    }
   </style>
 </head>
 <body>

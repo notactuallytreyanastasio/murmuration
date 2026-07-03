@@ -163,6 +163,12 @@ addEventListener('pointermove', (e) => {
 addEventListener('pointerdown', (e) => {
   falcon.x = e.clientX; falcon.y = e.clientY; falcon.active = true;
 });
+// on touch there's no hover: the falcon exists only while a finger is down,
+// otherwise it would hang at the last touch point scattering birds forever
+addEventListener('pointerup', (e) => {
+  if (e.pointerType === 'touch') falcon.active = false;
+});
+addEventListener('pointercancel', () => { falcon.active = false; });
 document.documentElement.addEventListener('mouseleave', () => { falcon.active = false; });
 addEventListener('blur', () => { falcon.active = false; });
 

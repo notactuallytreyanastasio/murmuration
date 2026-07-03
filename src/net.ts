@@ -25,13 +25,30 @@ const APP_ID = 'murmuration-sky-v1';
 const ROOM = 'global';
 const CHAT_MAX = 280;
 
+// Best-effort public TURN for peers behind hard NATs (cellular CGNAT etc).
+// Trystero ships STUN-only; if these creds are rejected ICE just skips
+// them. For guaranteed relay, swap in credentials from a free
+// metered.ca account (or any TURN provider) — same shape.
+const TURN_SERVERS = [
+  {
+    urls: [
+      'turn:global.relay.metered.ca:80',
+      'turn:global.relay.metered.ca:80?transport=tcp',
+      'turn:global.relay.metered.ca:443',
+      'turns:global.relay.metered.ca:443?transport=tcp',
+    ],
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+];
+
 type FalconMsg = { x: number; y: number; a: number };
 // Genome as an over-the-wire payload (trystero wants an index signature)
 type GenomeMsg = Genome & { [key: string]: string | number };
 
 export function connect(h: NetHandlers): Net | null {
   try {
-    const room = joinRoom({ appId: APP_ID }, ROOM, {
+    const room = joinRoom({ appId: APP_ID, turnConfig: TURN_SERVERS }, ROOM, {
       onJoinError: (err) => {
         console.error('[murmuration] join error:', err);
         h.onStatus('signal trouble — retrying');
