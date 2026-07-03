@@ -4,7 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>murmuration</title>
-  <meta name="description" content="A unique flock grown from your seed. Visitors' flocks merge. No server; the site's only memory is its visitors.">
+  <meta name="description" content="Move the birds, get a painting or whatever. There is also chat to talk to other bird wranglers. And you can interact">
+  <meta property="og:title" content="Lazy? Paint With Simulated Birds">
+  <meta property="og:description" content="Move the birds, get a painting or whatever. There is also chat to talk to other bird wranglers. And you can interact">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://notactuallytreyanastasio.github.io/murmuration/">
+  <meta property="og:image" content="https://notactuallytreyanastasio.github.io/murmuration/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Lazy? Paint With Simulated Birds">
+  <meta name="twitter:description" content="Move the birds, get a painting or whatever. There is also chat to talk to other bird wranglers. And you can interact">
+  <meta name="twitter:image" content="https://notactuallytreyanastasio.github.io/murmuration/og.png">
   <style>
     html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0c10;
       color: #c9c4b4; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -36,6 +47,10 @@
     .chat input:focus { border-color: #c9c4b4; }
     .chat input:disabled { opacity: .45; }
 
+    /* ?bare=1 — clean canvas for captures */
+    body.bare .wordmark, body.bare .hud, body.bare .presence, body.bare .chat {
+      display: none; }
+
     /* ---- small screens ---- */
     @media (max-width: 640px) {
       .wordmark { top: calc(10px + env(safe-area-inset-top)); left: 12px;
@@ -61,6 +76,7 @@
     <span>seed</span><span class="seed" id="hudSeed"></span>
     <button id="copyBtn">copy link</button>
     <button id="newBtn">new flock</button>
+    <button id="saveBtn">save png</button>
   </div>
   <div class="presence" id="hudPeers">alone in the sky</div>
   <div class="chat">

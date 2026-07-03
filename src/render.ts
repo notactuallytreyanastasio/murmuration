@@ -60,7 +60,10 @@ export function draw(
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, w, h);
   ctx.drawImage(painting, 0, 0, w, h);
+  drawBirds(ctx, sim);
+}
 
+export function drawBirds(ctx: CanvasRenderingContext2D, sim: Sim): void {
   for (const b of sim.birds) {
     const sp = Math.hypot(b.vx, b.vy) || 1;
     const nx = b.vx / sp, ny = b.vy / sp;

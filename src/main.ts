@@ -2,7 +2,7 @@ import { genomeFromSeed, type Genome } from './genome';
 import { mintSeed, rngFromSeed } from './prng';
 import { Perlin3 } from './noise';
 import { Sim, type Falcon } from './sim';
-import { BG, Painter, draw } from './render';
+import { BG, Painter, draw, drawBirds } from './render';
 import { connect } from './net';
 
 const SEED_KEY = 'murmuration.seed';
@@ -16,6 +16,7 @@ const hudSeed = document.getElementById('hudSeed')!;
 const copyBtn = document.getElementById('copyBtn') as HTMLButtonElement;
 const newBtn = document.getElementById('newBtn') as HTMLButtonElement;
 const hudPeers = document.getElementById('hudPeers')!;
+const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
 const chatLog = document.getElementById('chatLog')!;
 const chatForm = document.getElementById('chatForm') as HTMLFormElement;
 const chatInput = document.getElementById('chatInput') as HTMLInputElement;
@@ -23,9 +24,9 @@ const chatInput = document.getElementById('chatInput') as HTMLInputElement;
 let w = innerWidth, h = innerHeight;
 const dpr = Math.min(devicePixelRatio || 1, 2);
 
-let seed = new URLSearchParams(location.search).get('seed')
-  || localStorage.getItem(SEED_KEY)
-  || mintSeed();
+const params = new URLSearchParams(location.search);
+let seed = params.get('seed') || localStorage.getItem(SEED_KEY) || mintSeed();
+if (params.get('bare')) document.body.classList.add('bare');
 
 const noise = new Perlin3(rngFromSeed(FIELD_SEED));
 let sim = new Sim(noise, w, h);
@@ -183,6 +184,26 @@ newBtn.addEventListener('click', () => {
   net?.announce(ownGenome);
 });
 
+saveBtn.addEventListener('click', () => {
+  const out = document.createElement('canvas');
+  out.width = Math.round(w * dpr);
+  out.height = Math.round(h * dpr);
+  const octx = out.getContext('2d')!;
+  octx.fillStyle = BG;
+  octx.fillRect(0, 0, out.width, out.height);
+  octx.drawImage(painter.canvas, 0, 0);
+  octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawBirds(octx, sim);
+  out.toBlob((blob) => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `murmuration-${seed}.png`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+});
+
 // ---- main loop, with a one-shot perf adaptation for low-end devices ----
 let last = performance.now();
 let t = 0;
@@ -236,6 +257,19 @@ addEventListener('resize', resize);
 setSeed(seed);
 resize();
 build();
+
+// ?warp=N — pre-run N seconds of simulation instantly so the painting
+// arrives already developed (used for OG-image capture, fun regardless)
+const warpSecs = Math.min(Number(params.get('warp')) || 0, 240);
+if (warpSecs > 0) {
+  const step = 1 / 60;
+  for (let i = 0; i < warpSecs * 60; i++) {
+    t += step;
+    sim.step(step, t, [falcon]);
+    painter.deposit(sim);
+  }
+}
+
 updatePresence();
 net?.announce(ownGenome);
 requestAnimationFrame(loop);
