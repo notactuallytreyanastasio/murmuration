@@ -9,16 +9,19 @@ import type { Perlin3 } from './noise';
 
 export interface Bird {
   x: number; y: number;
+  px: number; py: number;   // position last frame, for paint strokes
   vx: number; vy: number;
   size: number;
-  color: string;
+  color: string;            // body color, drawn crisp on top
+  paint: string;            // pigment color, low alpha, accumulates below
   g: Genome;
 }
 
 export interface Falcon { x: number; y: number; active: boolean; }
 
-const R = 46;        // neighbor radius, px
+const R = 46;             // neighbor radius, px
 const R2 = R * R;
+const MAX_BIRDS = 2600;   // total budget across all flocks, for perf
 
 export class Sim {
   birds: Bird[] = [];
@@ -28,27 +31,50 @@ export class Sim {
 
   resize(w: number, h: number): void { this.w = w; this.h = h; }
 
-  addFlock(g: Genome, rand: () => number, count = g.count): void {
-    const cx = this.w * (0.25 + rand() * 0.5);
-    const cy = this.h * (0.25 + rand() * 0.5);
-    const heading = rand() * Math.PI * 2;
+  // fromEdge: peer flocks enter from a screen edge, flying inward,
+  // so a new arrival is visible as an arrival.
+  addFlock(g: Genome, rand: () => number, fromEdge = false): void {
+    const count = Math.min(g.count, MAX_BIRDS - this.birds.length);
+    if (count <= 0) return;
+
+    let cx: number, cy: number, heading: number;
+    if (fromEdge) {
+      const side = Math.floor(rand() * 4);
+      const along = 0.15 + rand() * 0.7;
+      if (side === 0) { cx = this.w * 0.06; cy = this.h * along; }
+      else if (side === 1) { cx = this.w * 0.94; cy = this.h * along; }
+      else if (side === 2) { cx = this.w * along; cy = this.h * 0.06; }
+      else { cx = this.w * along; cy = this.h * 0.94; }
+      heading = Math.atan2(this.h / 2 - cy, this.w / 2 - cx);
+    } else {
+      cx = this.w * (0.25 + rand() * 0.5);
+      cy = this.h * (0.25 + rand() * 0.5);
+      heading = rand() * Math.PI * 2;
+    }
+
     for (let i = 0; i < count; i++) {
       const a = rand() * Math.PI * 2;
-      const d = Math.sqrt(rand()) * Math.min(this.w, this.h) * 0.18;
+      const d = Math.sqrt(rand()) * Math.min(this.w, this.h) * (fromEdge ? 0.1 : 0.18);
       const hue = (rand() < 0.65 ? g.hueA : g.hueB) + (rand() - 0.5) * 14;
+      const x = cx + Math.cos(a) * d;
+      const y = cy + Math.sin(a) * d;
       this.birds.push({
-        x: cx + Math.cos(a) * d,
-        y: cy + Math.sin(a) * d,
+        x, y, px: x, py: y,
         vx: Math.cos(heading) * g.maxSpeed * 0.6,
         vy: Math.sin(heading) * g.maxSpeed * 0.6,
         size: g.size * (0.7 + rand() * 0.6),
         color: `hsla(${hue.toFixed(1)}, ${g.sat.toFixed(0)}%, ${g.light.toFixed(0)}%, 0.85)`,
+        paint: `hsla(${hue.toFixed(1)}, ${(g.sat * 0.9).toFixed(0)}%, ${(g.light * 0.82).toFixed(0)}%, 0.07)`,
         g,
       });
     }
   }
 
-  step(dt: number, t: number, falcon: Falcon): void {
+  removeFlock(g: Genome): void {
+    this.birds = this.birds.filter((b) => b.g !== g);
+  }
+
+  step(dt: number, t: number, falcons: Falcon[]): void {
     const { w, h, grid } = this;
     grid.clear();
     const key = (cx: number, cy: number) => cx * 73856093 ^ cy * 19349663;
@@ -108,9 +134,10 @@ export class Sim {
       ax += (Math.cos(ang) * g.maxSpeed - b.vx) * g.flowAffinity * 0.9;
       ay += (Math.sin(ang) * g.maxSpeed - b.vy) * g.flowAffinity * 0.9;
 
-      // the cursor is a falcon
-      if (falcon.active) {
-        const dx = b.x - falcon.x, dy = b.y - falcon.y;
+      // every cursor in the room is a falcon — yours and your peers'
+      for (const f of falcons) {
+        if (!f.active) continue;
+        const dx = b.x - f.x, dy = b.y - f.y;
         const d2 = dx * dx + dy * dy;
         const fr = 70 + g.skittish * 130;
         if (d2 < fr * fr && d2 > 0.01) {
@@ -141,14 +168,19 @@ export class Sim {
         b.vx *= s; b.vy *= s;
       }
 
+      b.px = b.x;
+      b.py = b.y;
       b.x += b.vx * dt;
       b.y += b.vy * dt;
 
       // toroidal wrap with a small margin so birds slip off one edge
-      // and return on the other without popping
+      // and return on the other without popping; shift px/py by the same
+      // amount so paint strokes never streak across the whole canvas
       const m = 12;
-      if (b.x < -m) b.x += w + 2 * m; else if (b.x > w + m) b.x -= w + 2 * m;
-      if (b.y < -m) b.y += h + 2 * m; else if (b.y > h + m) b.y -= h + 2 * m;
+      if (b.x < -m) { b.x += w + 2 * m; b.px += w + 2 * m; }
+      else if (b.x > w + m) { b.x -= w + 2 * m; b.px -= w + 2 * m; }
+      if (b.y < -m) { b.y += h + 2 * m; b.py += h + 2 * m; }
+      else if (b.y > h + m) { b.y -= h + 2 * m; b.py -= h + 2 * m; }
     }
   }
 }

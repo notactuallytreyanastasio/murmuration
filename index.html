@@ -17,6 +17,23 @@
     .hud button { background: none; border: 1px solid #3a3d46; color: #c9c4b4;
       font: inherit; padding: 3px 10px; border-radius: 99px; cursor: pointer; }
     .hud button:hover { border-color: #c9c4b4; }
+    .presence { position: fixed; top: 14px; right: 16px; font-size: 12px;
+      opacity: .55; letter-spacing: .08em; user-select: none; }
+    .chat { position: fixed; right: 16px; bottom: 14px; width: min(300px, 72vw);
+      display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+    .chat-log { display: flex; flex-direction: column; gap: 5px;
+      max-height: 38vh; overflow-y: auto; scrollbar-width: none;
+      mask-image: linear-gradient(to bottom, transparent, black 18%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent, black 18%); }
+    .msg { line-height: 1.45; overflow-wrap: break-word;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, .85); }
+    .msg .who { font-weight: 700; margin-right: 6px; }
+    .msg.system { opacity: .5; font-style: italic; }
+    .chat input { width: 100%; box-sizing: border-box; font: inherit;
+      background: rgba(11, 12, 16, .6); border: 1px solid #3a3d46;
+      border-radius: 99px; color: #c9c4b4; padding: 6px 12px; outline: none; }
+    .chat input:focus { border-color: #c9c4b4; }
+    .chat input:disabled { opacity: .45; }
   </style>
 </head>
 <body>
@@ -26,6 +43,14 @@
     <span>seed</span><span class="seed" id="hudSeed"></span>
     <button id="copyBtn">copy link</button>
     <button id="newBtn">new flock</button>
+  </div>
+  <div class="presence" id="hudPeers">alone in the sky</div>
+  <div class="chat">
+    <div class="chat-log" id="chatLog"></div>
+    <form id="chatForm">
+      <input id="chatInput" maxlength="280" autocomplete="off"
+        placeholder="no one else aloft yet…" disabled>
+    </form>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
