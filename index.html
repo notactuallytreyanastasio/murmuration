@@ -47,9 +47,26 @@
     .chat input:focus { border-color: #c9c4b4; }
     .chat input:disabled { opacity: .45; }
 
+    .roost-panel { position: fixed; left: 16px; bottom: 52px;
+      width: min(300px, 80vw); max-height: 42vh; overflow-y: auto;
+      background: rgba(11, 12, 16, .82); border: 1px solid #3a3d46;
+      border-radius: 12px; padding: 12px 14px; font-size: 12px;
+      backdrop-filter: blur(4px); }
+    .roost-panel .roost-title { text-transform: uppercase;
+      letter-spacing: .18em; font-size: 10px; opacity: .55;
+      margin-bottom: 8px; }
+    .roost-entry { display: flex; align-items: baseline; gap: 8px;
+      padding: 4px 0; }
+    .roost-entry .rname { font-weight: 700; }
+    .roost-entry .rmeta { opacity: .55; flex: 1; font-size: 11px; }
+    .roost-entry .rx { background: none; border: none; color: #c9c4b4;
+      opacity: .5; cursor: pointer; font: inherit; padding: 0 4px; }
+    .roost-entry .rx:hover { opacity: 1; }
+    .roost-empty { opacity: .5; font-style: italic; }
+
     /* ?bare=1 — clean canvas for captures */
-    body.bare .wordmark, body.bare .hud, body.bare .presence, body.bare .chat {
-      display: none; }
+    body.bare .wordmark, body.bare .hud, body.bare .presence, body.bare .chat,
+    body.bare .roost-panel { display: none; }
 
     /* ---- small screens ---- */
     @media (max-width: 640px) {
@@ -63,6 +80,8 @@
       .hud button { padding: 4px 10px; }
       .chat { left: 12px; right: 12px; width: auto;
         bottom: calc(10px + env(safe-area-inset-bottom)); }
+      .roost-panel { left: 12px; right: 12px; width: auto; bottom: auto;
+        top: calc(78px + env(safe-area-inset-top)); max-height: 34vh; }
       .chat-log { max-height: 24vh; }
       /* 16px stops iOS Safari from zooming the page on focus */
       .chat input { font-size: 16px; padding: 8px 14px; }
@@ -77,8 +96,13 @@
     <button id="copyBtn">copy link</button>
     <button id="newBtn">new flock</button>
     <button id="saveBtn">save png</button>
+    <button id="roostBtn">roost</button>
   </div>
   <div class="presence" id="hudPeers">alone in the sky</div>
+  <div class="roost-panel" id="roostPanel" hidden>
+    <div class="roost-title">flocks you carry</div>
+    <div id="roostList"></div>
+  </div>
   <div class="chat">
     <div class="chat-log" id="chatLog"></div>
     <form id="chatForm">

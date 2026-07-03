@@ -6,11 +6,19 @@ import { clampGenome, type Genome } from './genome';
 // normalized falcon positions, short chat strings. Nothing executable,
 // and every genome is clamped at ingress.
 
+export interface RoostWire {
+  g: Genome;
+  hops: number;
+  seen: number;
+}
+
 export interface NetHandlers {
   onFlock: (peerId: string, g: Genome) => void;
+  onJoin: (peerId: string) => void;
   onLeave: (peerId: string) => void;
   onFalcon: (peerId: string, x: number, y: number, active: boolean) => void;
   onChat: (peerId: string, text: string) => void;
+  onRoost: (peerId: string, entries: RoostWire[]) => void;
   onCount: (n: number) => void;
   onStatus: (s: string) => void;
 }
@@ -19,6 +27,7 @@ export interface Net {
   announce: (g: Genome) => void;
   sendFalcon: (x: number, y: number, active: boolean) => void;
   sendChat: (text: string) => void;
+  sendRoost: (entries: RoostWire[], toPeer?: string) => void;
 }
 
 const APP_ID = 'murmuration-sky-v1';
@@ -94,6 +103,26 @@ export function connect(h: NetHandlers): Net | null {
       },
     });
 
+    const roost = room.makeAction<{ flocks: { g: GenomeMsg; hops: number; seen: number }[] }>('roost', {
+      onMessage: (msg, { peerId }) => {
+        if (!msg || !Array.isArray(msg.flocks)) return;
+        const entries: RoostWire[] = [];
+        for (const f of msg.flocks.slice(0, 12)) {
+          if (!f || typeof f !== 'object' || !f.g) continue;
+          try {
+            entries.push({
+              g: clampGenome(f.g),
+              hops: Math.min(9, Math.max(0, Math.round(Number(f.hops) || 0))),
+              seen: Number(f.seen) || 0,
+            });
+          } catch {
+            // one bad flock shouldn't sink the rest
+          }
+        }
+        if (entries.length) h.onRoost(peerId, entries);
+      },
+    });
+
     const chat = room.makeAction<string>('chat', {
       onMessage: (text, { peerId }) => {
         if (typeof text === 'string' && text.trim()) {
@@ -106,6 +135,7 @@ export function connect(h: NetHandlers): Net | null {
       console.log('[murmuration] peer joined:', id);
       peers.add(id);
       if (current) void hello.send(current as GenomeMsg, { target: id });
+      h.onJoin(id);
       h.onCount(peers.size);
     };
 
@@ -126,6 +156,15 @@ export function connect(h: NetHandlers): Net | null {
       },
       sendChat: (text) => {
         if (peers.size) void chat.send(text.slice(0, CHAT_MAX));
+      },
+      sendRoost: (entries, toPeer) => {
+        if (!peers.size || !entries.length) return;
+        const flocks = entries.slice(0, 12).map((e) => ({
+          g: e.g as GenomeMsg,
+          hops: e.hops,
+          seen: e.seen,
+        }));
+        void roost.send({ flocks }, toPeer ? { target: toPeer } : undefined);
       },
     };
   } catch (err) {

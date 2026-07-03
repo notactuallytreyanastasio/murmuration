@@ -32,9 +32,11 @@ export class Sim {
   resize(w: number, h: number): void { this.w = w; this.h = h; }
 
   // fromEdge: peer flocks enter from a screen edge, flying inward,
-  // so a new arrival is visible as an arrival.
-  addFlock(g: Genome, rand: () => number, fromEdge = false): void {
-    const count = Math.min(g.count, MAX_BIRDS - this.birds.length);
+  // so a new arrival is visible as an arrival. count overrides the
+  // genome's own size (echo flocks from the roost fly smaller).
+  addFlock(g: Genome, rand: () => number, opts: { fromEdge?: boolean; count?: number } = {}): void {
+    const fromEdge = opts.fromEdge ?? false;
+    const count = Math.min(opts.count ?? g.count, MAX_BIRDS - this.birds.length);
     if (count <= 0) return;
 
     let cx: number, cy: number, heading: number;
@@ -72,6 +74,13 @@ export class Sim {
 
   removeFlock(g: Genome): void {
     this.birds = this.birds.filter((b) => b.g !== g);
+  }
+
+  // Keep only `keep` birds of a flock — the ones that stay behind when
+  // their visitor leaves.
+  thinFlock(g: Genome, keep: number): void {
+    let kept = 0;
+    this.birds = this.birds.filter((b) => b.g !== g || ++kept <= keep);
   }
 
   step(dt: number, t: number, falcons: Falcon[]): void {

@@ -3,7 +3,8 @@ import { mintSeed, rngFromSeed } from './prng';
 import { Perlin3 } from './noise';
 import { Sim, type Falcon } from './sim';
 import { BG, Painter, draw, drawBirds } from './render';
-import { connect } from './net';
+import { connect, type RoostWire } from './net';
+import { adopt, agoLabel, loadRoost, releaseFromRoost, saveRoost, type RoostEntry } from './roost';
 
 const SEED_KEY = 'murmuration.seed';
 // One shared sky: every visitor computes the identical flow field, so when
@@ -17,6 +18,9 @@ const copyBtn = document.getElementById('copyBtn') as HTMLButtonElement;
 const newBtn = document.getElementById('newBtn') as HTMLButtonElement;
 const hudPeers = document.getElementById('hudPeers')!;
 const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+const roostBtn = document.getElementById('roostBtn') as HTMLButtonElement;
+const roostPanel = document.getElementById('roostPanel')!;
+const roostList = document.getElementById('roostList')!;
 const chatLog = document.getElementById('chatLog')!;
 const chatForm = document.getElementById('chatForm') as HTMLFormElement;
 const chatInput = document.getElementById('chatInput') as HTMLInputElement;
@@ -38,11 +42,29 @@ const peerFlocks = new Map<string, Genome>();
 const peerFalcons = new Map<string, { x: number; y: number; active: boolean; seen: number }>();
 let roomCount = 0;
 
+// the roost: flocks we carry from past encounters (see roost.ts)
+const roost = loadRoost();
+const echoFlying = new Map<string, Genome>(); // roost seeds currently in the sky
+const MAX_ECHOES = 4;
+const echoCount = (g: Genome) =>
+  Math.min(110, Math.max(24, Math.round(g.count * 0.25)));
+
 function setSeed(next: string): void {
   seed = next;
   localStorage.setItem(SEED_KEY, seed);
   history.replaceState(null, '', `?seed=${encodeURIComponent(seed)}`);
   hudSeed.textContent = seed;
+}
+
+// echo flocks: a few of the roost's flocks fly with you, smaller than life
+function spawnEchoes(): void {
+  for (const r of roost) {
+    if (echoFlying.size >= MAX_ECHOES) break;
+    if (echoFlying.has(r.g.seed)) continue;
+    if ([...peerFlocks.values()].some((g) => g.seed === r.g.seed)) continue;
+    sim.addFlock(r.g, rngFromSeed('echo:' + r.g.seed), { fromEdge: true, count: echoCount(r.g) });
+    echoFlying.set(r.g.seed, r.g);
+  }
 }
 
 function build(): void {
@@ -51,11 +73,64 @@ function build(): void {
   // separate spawn stream so the genome's random draws stay stable if
   // spawn logic ever changes
   sim.addFlock(ownGenome, rngFromSeed(seed + ':spawn'));
-  for (const [id, g] of peerFlocks) sim.addFlock(g, rngFromSeed(id), true);
+  for (const [id, g] of peerFlocks) sim.addFlock(g, rngFromSeed(id), { fromEdge: true });
+  echoFlying.clear();
+  spawnEchoes();
   painter.clear(); // a new flock starts a fresh painting
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, w, h);
 }
+
+// ---- roost panel ----
+function updateRoostUI(): void {
+  roostBtn.textContent = roost.length ? `roost (${roost.length})` : 'roost';
+  roostList.textContent = '';
+  if (!roost.length) {
+    const empty = document.createElement('div');
+    empty.className = 'roost-empty';
+    empty.textContent = 'no adopted flocks yet — meet someone';
+    roostList.append(empty);
+    return;
+  }
+  for (const r of roost) {
+    const row = document.createElement('div');
+    row.className = 'roost-entry';
+    const name = document.createElement('span');
+    name.className = 'rname';
+    name.style.color = `hsl(${r.g.hueA.toFixed(0)}, ${Math.max(r.g.sat, 45).toFixed(0)}%, 72%)`;
+    name.textContent = r.g.seed;
+    const meta = document.createElement('span');
+    meta.className = 'rmeta';
+    meta.textContent = r.hops === 0
+      ? `flew with you · ${agoLabel(r.seen)}`
+      : `via ${r.from} · ${r.hops} hop${r.hops > 1 ? 's' : ''} · ${agoLabel(r.seen)}`;
+    const rx = document.createElement('button');
+    rx.className = 'rx';
+    rx.textContent = '×';
+    rx.title = 'release this flock';
+    rx.addEventListener('click', () => {
+      const released = releaseFromRoost(roost, r.g.seed);
+      if (released) {
+        const flying = echoFlying.get(r.g.seed);
+        if (flying) { sim.removeFlock(flying); echoFlying.delete(r.g.seed); }
+        saveRoost(roost);
+        spawnEchoes();
+        updateRoostUI();
+        addSystemLine(`released ${r.g.seed}`);
+      }
+    });
+    row.append(name, meta, rx);
+    roostList.append(row);
+  }
+}
+
+roostBtn.addEventListener('click', () => {
+  roostPanel.hidden = !roostPanel.hidden;
+  if (!roostPanel.hidden) updateRoostUI();
+});
+
+const wireRoost = (): RoostWire[] =>
+  roost.map((r) => ({ g: r.g, hops: r.hops, seen: r.seen }));
 
 // ---- presence + chat ----
 let netStatus = 'finding the swarm…';
@@ -101,18 +176,58 @@ const net = connect({
       if (prev.seed === g.seed) return; // duplicate hello, already flying
       sim.removeFlock(prev);
     }
+    // if we were flying their echo from the roost, the real thing replaces it
+    const echo = echoFlying.get(g.seed);
+    if (echo) { sim.removeFlock(echo); echoFlying.delete(g.seed); }
     peerFlocks.set(id, g);
-    sim.addFlock(g, rngFromSeed(id), true);
+    sim.addFlock(g, rngFromSeed(id), { fromEdge: true });
+    const known = roost.find((r) => r.g.seed === g.seed);
+    if (known) { known.seen = Date.now(); saveRoost(roost); }
     addSystemLine(`${g.seed} joined your sky`);
+  },
+  onJoin: (id) => {
+    if (roost.length) net?.sendRoost(wireRoost(), id);
   },
   onLeave: (id) => {
     const g = peerFlocks.get(id);
     if (g) {
-      sim.removeFlock(g);
       peerFlocks.delete(id);
-      addSystemLine(`${g.seed} flew on`);
+      // adoption: a few of their birds stay with you, and their genome
+      // perches in your roost to be carried onward
+      adopt(roost, { g, from: g.seed, hops: 0, seen: Date.now() }, ownGenome.seed);
+      saveRoost(roost);
+      if (roost.some((r) => r.g.seed === g.seed) && echoFlying.size < MAX_ECHOES) {
+        sim.thinFlock(g, echoCount(g));
+        echoFlying.set(g.seed, g);
+        addSystemLine(`${g.seed} flew on — some of their birds stayed with you`);
+      } else {
+        sim.removeFlock(g);
+        addSystemLine(`${g.seed} flew on`);
+      }
+      updateRoostUI();
     }
     peerFalcons.delete(id);
+  },
+  onRoost: (id, entries) => {
+    const carrier = peerFlocks.get(id)?.seed ?? 'a passing stranger';
+    let newcomers = 0;
+    for (const e of entries) {
+      if ([...peerFlocks.values()].some((g) => g.seed === e.g.seed)) continue;
+      const isNew = adopt(
+        roost,
+        { g: e.g, from: carrier, hops: e.hops + 1, seen: e.seen },
+        ownGenome.seed,
+      );
+      if (isNew) {
+        newcomers++;
+        addSystemLine(`caught wind of ${e.g.seed} (via ${carrier})`);
+      }
+    }
+    if (newcomers) {
+      saveRoost(roost);
+      spawnEchoes();
+      updateRoostUI();
+    }
   },
   onFalcon: (id, x, y, active) => {
     peerFalcons.set(id, { x, y, active, seen: performance.now() });
@@ -271,5 +386,6 @@ if (warpSecs > 0) {
 }
 
 updatePresence();
+updateRoostUI();
 net?.announce(ownGenome);
 requestAnimationFrame(loop);
