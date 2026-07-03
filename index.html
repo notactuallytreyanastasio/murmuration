@@ -47,6 +47,32 @@
     .chat input:focus { border-color: #c9c4b4; }
     .chat input:disabled { opacity: .45; }
 
+    .welcome { position: fixed; inset: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(11, 12, 16, .72); backdrop-filter: blur(3px);
+      padding: 20px; }
+    .welcome-card { max-width: 30em; background: #101218;
+      border: 1px solid #3a3d46; border-radius: 16px;
+      padding: 28px 30px 24px; font-size: 13.5px; line-height: 1.7;
+      box-shadow: 0 12px 48px rgba(0, 0, 0, .5); }
+    .welcome-card h1 { font-size: 15px; letter-spacing: .3em;
+      text-transform: uppercase; font-weight: 400; margin: 0 0 14px;
+      opacity: .9; }
+    .welcome-card p { margin: 0 0 12px; opacity: .85; }
+    .welcome-card p b { color: #e8dfc8; font-weight: 700; }
+    .welcome-card .fine { font-size: 11.5px; opacity: .5; font-style: italic; }
+    .welcome-card button { margin-top: 14px; width: 100%;
+      background: #e8dfc8; border: none; color: #0b0c10; font: inherit;
+      font-weight: 700; padding: 10px; border-radius: 99px; cursor: pointer; }
+    .welcome-card button:hover { background: #fff; }
+    @media (max-width: 640px) {
+      .welcome-card { font-size: 12px; line-height: 1.55;
+        padding: 18px 18px 16px; max-height: 84vh; overflow-y: auto; }
+      .welcome-card h1 { font-size: 13px; margin-bottom: 10px; }
+      .welcome-card p { margin-bottom: 9px; }
+      .welcome-card button { margin-top: 8px; padding: 9px; }
+    }
+
     .roost-panel { position: fixed; left: 16px; bottom: 52px;
       width: min(300px, 80vw); max-height: 42vh; overflow-y: auto;
       background: rgba(11, 12, 16, .82); border: 1px solid #3a3d46;
@@ -66,7 +92,7 @@
 
     /* ?bare=1 — clean canvas for captures */
     body.bare .wordmark, body.bare .hud, body.bare .presence, body.bare .chat,
-    body.bare .roost-panel { display: none; }
+    body.bare .roost-panel, body.bare .welcome { display: none; }
 
     /* ---- small screens ---- */
     @media (max-width: 640px) {
@@ -97,8 +123,28 @@
     <button id="newBtn">new flock</button>
     <button id="saveBtn">save png</button>
     <button id="roostBtn">roost</button>
+    <button id="aboutBtn" title="what is this?">?</button>
   </div>
   <div class="presence" id="hudPeers">alone in the sky</div>
+  <div class="welcome" id="welcome" hidden>
+    <div class="welcome-card">
+      <h1>murmuration</h1>
+      <p>This is <b>your flock</b>. It grew from a seed only you have, and
+        it's painting the sky as it flies. No two flocks are alike.</p>
+      <p><b>Your cursor — or finger — is a falcon.</b> Move it through the
+        birds and herd them — where they fly, they paint. Take your time;
+        the painting deepens the longer you stay.</p>
+      <p><b>You might not be alone.</b> If someone else is here, their flock
+        will glide in from the edge and fly with yours — and you can talk to
+        them in the chat below. When they leave, a few of their birds stay
+        with you, and you'll carry them to whoever you meet next (check your
+        <b>roost</b>).</p>
+      <p class="fine">There is no server and nothing is stored anywhere but
+        in visitors' browsers. Whatever this place remembers, it remembers
+        through people.</p>
+      <button id="welcomeBtn">start flying</button>
+    </div>
+  </div>
   <div class="roost-panel" id="roostPanel" hidden>
     <div class="roost-title">flocks you carry</div>
     <div id="roostList"></div>

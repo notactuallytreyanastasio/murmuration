@@ -19,6 +19,9 @@ const newBtn = document.getElementById('newBtn') as HTMLButtonElement;
 const hudPeers = document.getElementById('hudPeers')!;
 const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
 const roostBtn = document.getElementById('roostBtn') as HTMLButtonElement;
+const aboutBtn = document.getElementById('aboutBtn') as HTMLButtonElement;
+const welcome = document.getElementById('welcome')!;
+const welcomeBtn = document.getElementById('welcomeBtn') as HTMLButtonElement;
 const roostPanel = document.getElementById('roostPanel')!;
 const roostList = document.getElementById('roostList')!;
 const chatLog = document.getElementById('chatLog')!;
@@ -123,6 +126,25 @@ function updateRoostUI(): void {
     roostList.append(row);
   }
 }
+
+// ---- first-visit explainer ----
+const WELCOMED_KEY = 'murmuration.welcomed';
+if (!localStorage.getItem(WELCOMED_KEY) && !params.get('bare')) {
+  welcome.hidden = false;
+}
+welcomeBtn.addEventListener('click', () => {
+  welcome.hidden = true;
+  localStorage.setItem(WELCOMED_KEY, '1');
+});
+welcome.addEventListener('click', (e) => {
+  if (e.target === welcome) {
+    welcome.hidden = true;
+    localStorage.setItem(WELCOMED_KEY, '1');
+  }
+});
+aboutBtn.addEventListener('click', () => {
+  welcome.hidden = false;
+});
 
 roostBtn.addEventListener('click', () => {
   roostPanel.hidden = !roostPanel.hidden;
